@@ -1,5 +1,11 @@
 import request from '@/plugins/globalRequest';
 
+export async function getApplicationDashboard() {
+  return request<API.ApplicationDashboard>('/api/application/dashboard', {
+    method: 'GET',
+  });
+}
+
 export async function listApplications(params: API.JobApplicationQueryParams) {
   return request<API.JobApplicationPage>('/api/application/list', {
     method: 'GET',

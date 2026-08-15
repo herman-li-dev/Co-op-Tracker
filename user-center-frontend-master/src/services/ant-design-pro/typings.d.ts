@@ -7,7 +7,7 @@ declare namespace API {
     userName?: string;
     userAccount: string;
     avatarUrl?: string;
-    gender:number;
+    gender: number;
     phone: string;
     email: string;
     userStatus: number;
@@ -88,6 +88,17 @@ declare namespace API {
     pages: number;
   };
 
+  type ApplicationDashboard = {
+    total: number;
+    applied: number;
+    interviews: number;
+    offers: number;
+    rejected: number;
+    upcomingDeadlines: number;
+    followUpsDue: number;
+    recentApplications: JobApplication[];
+  };
+
   type RuleListItem = {
     key?: number;
     disabled?: boolean;
@@ -107,11 +118,11 @@ declare namespace API {
    * 通用返回类
    */
   type BaseResponse<T> = {
-    code: number,
-    data: T,
-    message: string,
-    description: string,
-  }
+    code: number;
+    data: T;
+    message: string;
+    description: string;
+  };
 
   type RuleList = {
     data?: RuleListItem[];

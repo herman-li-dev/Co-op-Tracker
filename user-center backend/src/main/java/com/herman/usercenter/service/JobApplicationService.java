@@ -6,6 +6,7 @@ import com.herman.usercenter.model.domain.JobApplication;
 import com.herman.usercenter.model.domain.request.JobApplicationAddRequest;
 import com.herman.usercenter.model.domain.request.JobApplicationQueryRequest;
 import com.herman.usercenter.model.domain.request.JobApplicationUpdateRequest;
+import com.herman.usercenter.model.vo.ApplicationDashboardVO;
 
 public interface JobApplicationService extends IService<JobApplication> {
 
@@ -18,4 +19,6 @@ public interface JobApplicationService extends IService<JobApplication> {
     JobApplication getApplication(long id, long userId);
 
     Page<JobApplication> listApplications(JobApplicationQueryRequest queryRequest, long userId);
+
+    ApplicationDashboardVO getDashboard(long userId);
 }

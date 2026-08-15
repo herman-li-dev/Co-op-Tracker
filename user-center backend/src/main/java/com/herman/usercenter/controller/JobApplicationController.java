@@ -11,6 +11,7 @@ import com.herman.usercenter.model.domain.request.JobApplicationAddRequest;
 import com.herman.usercenter.model.domain.request.JobApplicationDeleteRequest;
 import com.herman.usercenter.model.domain.request.JobApplicationQueryRequest;
 import com.herman.usercenter.model.domain.request.JobApplicationUpdateRequest;
+import com.herman.usercenter.model.vo.ApplicationDashboardVO;
 import com.herman.usercenter.service.JobApplicationService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -74,6 +75,12 @@ public class JobApplicationController {
         Page<JobApplication> page = jobApplicationService.listApplications(
                 queryRequest, getLoginUserId(request));
         return ResultUtils.success(page);
+    }
+
+    @GetMapping("/dashboard")
+    public BaseResponse<ApplicationDashboardVO> getDashboard(HttpServletRequest request) {
+        ApplicationDashboardVO dashboard = jobApplicationService.getDashboard(getLoginUserId(request));
+        return ResultUtils.success(dashboard);
     }
 
     private long getLoginUserId(HttpServletRequest request) {

@@ -11,9 +11,13 @@ import com.herman.usercenter.model.domain.request.JobApplicationAddRequest;
 import com.herman.usercenter.model.domain.request.JobApplicationQueryRequest;
 import com.herman.usercenter.model.domain.request.JobApplicationUpdateRequest;
 import com.herman.usercenter.model.enums.JobApplicationStatus;
+import com.herman.usercenter.model.vo.ApplicationDashboardVO;
 import com.herman.usercenter.service.JobApplicationService;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
+
+import java.time.LocalDate;
+import java.util.List;
 
 @Service
 public class JobApplicationServiceImpl
@@ -130,6 +134,40 @@ public class JobApplicationServiceImpl
         }
         queryWrapper.orderByDesc("created_at");
         return page(new Page<>(current, pageSize), queryWrapper);
+    }
+
+    @Override
+    public ApplicationDashboardVO getDashboard(long userId) {
+        if (userId <= 0) {
+            throw new BusinessException(ErrorCode.NOT_LOGIN);
+        }
+
+        LocalDate today = LocalDate.now();
+        ApplicationDashboardVO dashboard = new ApplicationDashboardVO();
+        dashboard.setTotal(count(ownedApplications(userId)));
+        dashboard.setApplied(countByStatus(userId, JobApplicationStatus.APPLIED));
+        dashboard.setInterviews(countByStatus(userId, JobApplicationStatus.INTERVIEW));
+        dashboard.setOffers(countByStatus(userId, JobApplicationStatus.OFFER));
+        dashboard.setRejected(countByStatus(userId, JobApplicationStatus.REJECTED));
+        dashboard.setUpcomingDeadlines(count(ownedApplications(userId)
+                .ge("deadline", today)
+                .le("deadline", today.plusDays(7))));
+        dashboard.setFollowUpsDue(count(ownedApplications(userId)
+                .le("next_follow_up_date", today)));
+
+        List<JobApplication> recentApplications = list(ownedApplications(userId)
+                .orderByDesc("created_at")
+                .last("LIMIT 5"));
+        dashboard.setRecentApplications(recentApplications);
+        return dashboard;
+    }
+
+    private long countByStatus(long userId, JobApplicationStatus status) {
+        return count(ownedApplications(userId).eq("status", status.name()));
+    }
+
+    private QueryWrapper<JobApplication> ownedApplications(long userId) {
+        return new QueryWrapper<JobApplication>().eq("user_id", userId);
     }
 
     private JobApplication requireOwnedApplication(long id, long userId) {
