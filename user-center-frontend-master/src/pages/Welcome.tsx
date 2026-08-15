@@ -4,9 +4,10 @@ import {
   ClockCircleOutlined,
   ProjectOutlined,
 } from '@ant-design/icons';
+import { Line, Pie } from '@ant-design/charts';
 import { PageContainer } from '@ant-design/pro-layout';
 import { getApplicationDashboard } from '@/services/application';
-import { Button, Card, Col, message, Row, Statistic, Table, Tag, Typography } from 'antd';
+import { Button, Card, Col, Empty, message, Row, Statistic, Table, Tag, Typography } from 'antd';
 import type { ColumnsType } from 'antd/lib/table';
 import React, { useEffect, useState } from 'react';
 import { history } from 'umi';
@@ -77,6 +78,9 @@ const Welcome: React.FC = () => {
   useEffect(() => {
     loadDashboard();
   }, []);
+
+  const statusDistribution = (dashboard?.statusDistribution ?? []).filter((item) => item.count > 0);
+  const weeklyTrend = dashboard?.weeklyTrend ?? [];
 
   return (
     <PageContainer title={false}>
@@ -157,6 +161,43 @@ const Welcome: React.FC = () => {
               value={dashboard?.followUpsDue ?? 0}
               prefix={<ClockCircleOutlined />}
               valueStyle={{ color: '#eb2f96' }}
+            />
+          </Card>
+        </Col>
+      </Row>
+
+      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+        <Col xs={24} lg={12}>
+          <Card title="Application Status Distribution" loading={loading}>
+            {statusDistribution.length > 0 ? (
+              <Pie
+                data={statusDistribution}
+                angleField="count"
+                colorField="status"
+                radius={0.9}
+                innerRadius={0.6}
+                height={300}
+                label={{ type: 'inner', offset: '-50%', content: '{value}' }}
+                legend={{ position: 'bottom' }}
+                interactions={[{ type: 'element-active' }]}
+              />
+            ) : (
+              <Empty description="No application data" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+            )}
+          </Card>
+        </Col>
+        <Col xs={24} lg={12}>
+          <Card title="Applications Over the Last 8 Weeks" loading={loading}>
+            <Line
+              data={weeklyTrend}
+              xField="weekStart"
+              yField="count"
+              height={300}
+              smooth
+              point={{ size: 4, shape: 'circle' }}
+              meta={{ count: { alias: 'Applications', min: 0 } }}
+              yAxis={{ tickInterval: 1 }}
+              tooltip={{ showMarkers: true }}
             />
           </Card>
         </Col>

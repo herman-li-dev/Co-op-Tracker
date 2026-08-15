@@ -29,4 +29,8 @@ public class ApplicationDashboardVO implements Serializable {
     private Long followUpsDue;
 
     private List<JobApplication> recentApplications;
+
+    private List<ApplicationStatusCountVO> statusDistribution;
+
+    private List<WeeklyApplicationCountVO> weeklyTrend;
 }

@@ -12,12 +12,20 @@ import com.herman.usercenter.model.domain.request.JobApplicationQueryRequest;
 import com.herman.usercenter.model.domain.request.JobApplicationUpdateRequest;
 import com.herman.usercenter.model.enums.JobApplicationStatus;
 import com.herman.usercenter.model.vo.ApplicationDashboardVO;
+import com.herman.usercenter.model.vo.ApplicationStatusCountVO;
+import com.herman.usercenter.model.vo.WeeklyApplicationCountVO;
 import com.herman.usercenter.service.JobApplicationService;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.temporal.TemporalAdjusters;
+import java.util.ArrayList;
+import java.util.EnumMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class JobApplicationServiceImpl
@@ -144,11 +152,12 @@ public class JobApplicationServiceImpl
 
         LocalDate today = LocalDate.now();
         ApplicationDashboardVO dashboard = new ApplicationDashboardVO();
+        Map<JobApplicationStatus, Long> statusCounts = getStatusCounts(userId);
         dashboard.setTotal(count(ownedApplications(userId)));
-        dashboard.setApplied(countByStatus(userId, JobApplicationStatus.APPLIED));
-        dashboard.setInterviews(countByStatus(userId, JobApplicationStatus.INTERVIEW));
-        dashboard.setOffers(countByStatus(userId, JobApplicationStatus.OFFER));
-        dashboard.setRejected(countByStatus(userId, JobApplicationStatus.REJECTED));
+        dashboard.setApplied(statusCounts.get(JobApplicationStatus.APPLIED));
+        dashboard.setInterviews(statusCounts.get(JobApplicationStatus.INTERVIEW));
+        dashboard.setOffers(statusCounts.get(JobApplicationStatus.OFFER));
+        dashboard.setRejected(statusCounts.get(JobApplicationStatus.REJECTED));
         dashboard.setUpcomingDeadlines(count(ownedApplications(userId)
                 .ge("deadline", today)
                 .le("deadline", today.plusDays(7))));
@@ -159,7 +168,64 @@ public class JobApplicationServiceImpl
                 .orderByDesc("created_at")
                 .last("LIMIT 5"));
         dashboard.setRecentApplications(recentApplications);
+        dashboard.setStatusDistribution(toStatusDistribution(statusCounts));
+        dashboard.setWeeklyTrend(getWeeklyTrend(userId, today));
         return dashboard;
+    }
+
+    private Map<JobApplicationStatus, Long> getStatusCounts(long userId) {
+        Map<JobApplicationStatus, Long> statusCounts = new EnumMap<>(JobApplicationStatus.class);
+        for (JobApplicationStatus status : JobApplicationStatus.values()) {
+            statusCounts.put(status, countByStatus(userId, status));
+        }
+        return statusCounts;
+    }
+
+    private List<ApplicationStatusCountVO> toStatusDistribution(
+            Map<JobApplicationStatus, Long> statusCounts) {
+        List<ApplicationStatusCountVO> distribution = new ArrayList<>();
+        for (JobApplicationStatus status : JobApplicationStatus.values()) {
+            ApplicationStatusCountVO item = new ApplicationStatusCountVO();
+            item.setStatus(status.name());
+            item.setCount(statusCounts.get(status));
+            distribution.add(item);
+        }
+        return distribution;
+    }
+
+    private List<WeeklyApplicationCountVO> getWeeklyTrend(long userId, LocalDate today) {
+        LocalDate currentWeekStart = today.with(
+                TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+        LocalDate firstWeekStart = currentWeekStart.minusWeeks(7);
+
+        Map<LocalDate, Long> weeklyCounts = new LinkedHashMap<>();
+        for (int week = 0; week < 8; week++) {
+            weeklyCounts.put(firstWeekStart.plusWeeks(week), 0L);
+        }
+
+        List<JobApplication> applications = list(ownedApplications(userId)
+                .ge("applied_date", firstWeekStart)
+                .le("applied_date", today));
+        for (JobApplication application : applications) {
+            if (application == null || application.getAppliedDate() == null) {
+                continue;
+            }
+            LocalDate appliedDate = application.getAppliedDate();
+            LocalDate weekStart = appliedDate.with(
+                    TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+            if (weeklyCounts.containsKey(weekStart)) {
+                weeklyCounts.put(weekStart, weeklyCounts.get(weekStart) + 1);
+            }
+        }
+
+        List<WeeklyApplicationCountVO> trend = new ArrayList<>();
+        for (Map.Entry<LocalDate, Long> entry : weeklyCounts.entrySet()) {
+            WeeklyApplicationCountVO item = new WeeklyApplicationCountVO();
+            item.setWeekStart(entry.getKey());
+            item.setCount(entry.getValue());
+            trend.add(item);
+        }
+        return trend;
     }
 
     private long countByStatus(long userId, JobApplicationStatus status) {

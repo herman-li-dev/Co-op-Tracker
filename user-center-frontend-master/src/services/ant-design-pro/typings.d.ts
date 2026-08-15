@@ -97,6 +97,18 @@ declare namespace API {
     upcomingDeadlines: number;
     followUpsDue: number;
     recentApplications: JobApplication[];
+    statusDistribution: ApplicationStatusCount[];
+    weeklyTrend: WeeklyApplicationCount[];
+  };
+
+  type ApplicationStatusCount = {
+    status: JobApplicationStatus;
+    count: number;
+  };
+
+  type WeeklyApplicationCount = {
+    weekStart: string;
+    count: number;
   };
 
   type RuleListItem = {
