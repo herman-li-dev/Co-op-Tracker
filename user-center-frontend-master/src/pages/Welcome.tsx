@@ -77,6 +77,9 @@ const Welcome: React.FC = () => {
 
   useEffect(() => {
     loadDashboard();
+    const handleApplicationsUpdated = () => loadDashboard();
+    window.addEventListener('applications-updated', handleApplicationsUpdated);
+    return () => window.removeEventListener('applications-updated', handleApplicationsUpdated);
   }, []);
 
   const statusDistribution = (dashboard?.statusDistribution ?? []).filter((item) => item.count > 0);
@@ -138,6 +141,29 @@ const Welcome: React.FC = () => {
               title="Rejected"
               value={dashboard?.rejected ?? 0}
               valueStyle={{ color: '#cf1322' }}
+            />
+          </Card>
+        </Col>
+      </Row>
+
+      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+        <Col xs={24} md={12}>
+          <Card loading={loading}>
+            <Statistic
+              title="Interview rate"
+              value={dashboard?.interviewRate ?? 0}
+              precision={1}
+              suffix="%"
+            />
+          </Card>
+        </Col>
+        <Col xs={24} md={12}>
+          <Card loading={loading}>
+            <Statistic
+              title="Offer rate"
+              value={dashboard?.offerRate ?? 0}
+              precision={1}
+              suffix="%"
             />
           </Card>
         </Col>

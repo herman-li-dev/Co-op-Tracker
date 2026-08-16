@@ -20,6 +20,13 @@ export async function getApplication(id: number) {
   });
 }
 
+export async function getApplicationHistory(id: number) {
+  return request<API.JobApplicationStatusHistory[]>('/api/application/history', {
+    method: 'GET',
+    params: { id },
+  });
+}
+
 export async function addApplication(body: API.JobApplicationInput) {
   return request<number>('/api/application/add', {
     method: 'POST',

@@ -6,7 +6,9 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.herman.usercenter.common.ErrorCode;
 import com.herman.usercenter.exception.BusinessException;
 import com.herman.usercenter.mapper.JobApplicationMapper;
+import com.herman.usercenter.mapper.JobApplicationStatusHistoryMapper;
 import com.herman.usercenter.model.domain.JobApplication;
+import com.herman.usercenter.model.domain.JobApplicationStatusHistory;
 import com.herman.usercenter.model.domain.request.JobApplicationAddRequest;
 import com.herman.usercenter.model.domain.request.JobApplicationQueryRequest;
 import com.herman.usercenter.model.domain.request.JobApplicationUpdateRequest;
@@ -17,7 +19,13 @@ import com.herman.usercenter.model.vo.WeeklyApplicationCountVO;
 import com.herman.usercenter.service.JobApplicationService;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import javax.annotation.Resource;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.temporal.TemporalAdjusters;
@@ -33,14 +41,17 @@ public class JobApplicationServiceImpl
         implements JobApplicationService {
 
     private static final long MAX_PAGE_SIZE = 50;
+    private static final int MAX_NOTES_LENGTH = 2000;
+
+    @Resource
+    private JobApplicationStatusHistoryMapper statusHistoryMapper;
 
     @Override
+    @Transactional
     public long addApplication(JobApplicationAddRequest addRequest, long userId) {
         if (addRequest == null || userId <= 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
-        validateRequiredFields(addRequest.getCompanyName(), addRequest.getJobTitle());
-
         String status = normalizeStatus(addRequest.getStatus(), JobApplicationStatus.SAVED.name());
         JobApplication application = new JobApplication();
         application.setUserId(userId);
@@ -55,26 +66,28 @@ public class JobApplicationServiceImpl
         application.setNextFollowUpDate(addRequest.getNextFollowUpDate());
         application.setNextStep(addRequest.getNextStep());
         application.setNotes(addRequest.getNotes());
+        validateApplication(application);
 
         if (!save(application)) {
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "Unable to create the application");
         }
+        recordStatusChange(application, null, application.getStatus());
         return application.getId();
     }
 
     @Override
+    @Transactional
     public boolean updateApplication(JobApplicationUpdateRequest updateRequest, long userId) {
         if (updateRequest == null || updateRequest.getId() == null || userId <= 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
         JobApplication existing = requireOwnedApplication(updateRequest.getId(), userId);
+        String previousStatus = existing.getStatus();
 
         if (updateRequest.getCompanyName() != null) {
-            validateRequiredFields(updateRequest.getCompanyName(), existing.getJobTitle());
             existing.setCompanyName(updateRequest.getCompanyName().trim());
         }
         if (updateRequest.getJobTitle() != null) {
-            validateRequiredFields(existing.getCompanyName(), updateRequest.getJobTitle());
             existing.setJobTitle(updateRequest.getJobTitle().trim());
         }
         if (updateRequest.getStatus() != null) {
@@ -104,7 +117,12 @@ public class JobApplicationServiceImpl
         if (updateRequest.getNotes() != null) {
             existing.setNotes(updateRequest.getNotes());
         }
-        return updateById(existing);
+        validateApplication(existing);
+        boolean updated = updateById(existing);
+        if (updated && !StringUtils.equals(previousStatus, existing.getStatus())) {
+            recordStatusChange(existing, previousStatus, existing.getStatus());
+        }
+        return updated;
     }
 
     @Override
@@ -140,7 +158,25 @@ public class JobApplicationServiceImpl
         if (StringUtils.isNotBlank(query.getStatus())) {
             queryWrapper.eq("status", normalizeStatus(query.getStatus(), null));
         }
-        queryWrapper.orderByDesc("created_at");
+        validateDateRange(query.getAppliedDateStart(), query.getAppliedDateEnd(), "applied date");
+        validateDateRange(query.getDeadlineStart(), query.getDeadlineEnd(), "deadline");
+        queryWrapper.ge(query.getAppliedDateStart() != null,
+                "applied_date", query.getAppliedDateStart());
+        queryWrapper.le(query.getAppliedDateEnd() != null,
+                "applied_date", query.getAppliedDateEnd());
+        queryWrapper.ge(query.getDeadlineStart() != null,
+                "deadline", query.getDeadlineStart());
+        queryWrapper.le(query.getDeadlineEnd() != null,
+                "deadline", query.getDeadlineEnd());
+
+        String sortColumn = getSortColumn(query.getSortField());
+        if (sortColumn == null) {
+            queryWrapper.orderByDesc("created_at");
+        } else {
+            boolean ascending = "asc".equalsIgnoreCase(query.getSortOrder())
+                    || "ascend".equalsIgnoreCase(query.getSortOrder());
+            queryWrapper.orderBy(true, ascending, sortColumn);
+        }
         return page(new Page<>(current, pageSize), queryWrapper);
     }
 
@@ -158,6 +194,8 @@ public class JobApplicationServiceImpl
         dashboard.setInterviews(statusCounts.get(JobApplicationStatus.INTERVIEW));
         dashboard.setOffers(statusCounts.get(JobApplicationStatus.OFFER));
         dashboard.setRejected(statusCounts.get(JobApplicationStatus.REJECTED));
+        dashboard.setInterviewRate(calculateRate(userId, JobApplicationStatus.INTERVIEW, dashboard.getTotal()));
+        dashboard.setOfferRate(calculateRate(userId, JobApplicationStatus.OFFER, dashboard.getTotal()));
         dashboard.setUpcomingDeadlines(count(ownedApplications(userId)
                 .ge("deadline", today)
                 .le("deadline", today.plusDays(7))));
@@ -171,6 +209,36 @@ public class JobApplicationServiceImpl
         dashboard.setStatusDistribution(toStatusDistribution(statusCounts));
         dashboard.setWeeklyTrend(getWeeklyTrend(userId, today));
         return dashboard;
+    }
+
+    @Override
+    public List<JobApplicationStatusHistory> getStatusHistory(long applicationId, long userId) {
+        requireOwnedApplication(applicationId, userId);
+        return statusHistoryMapper.selectList(new QueryWrapper<JobApplicationStatusHistory>()
+                .eq("application_id", applicationId)
+                .eq("user_id", userId)
+                .orderByAsc("changed_at"));
+    }
+
+    private void recordStatusChange(JobApplication application, String fromStatus, String toStatus) {
+        JobApplicationStatusHistory history = new JobApplicationStatusHistory();
+        history.setApplicationId(application.getId());
+        history.setUserId(application.getUserId());
+        history.setFromStatus(fromStatus);
+        history.setToStatus(toStatus);
+        statusHistoryMapper.insert(history);
+    }
+
+    private BigDecimal calculateRate(long userId, JobApplicationStatus status, Long total) {
+        if (total == null || total == 0) {
+            return BigDecimal.ZERO.setScale(1, RoundingMode.HALF_UP);
+        }
+        long converted = statusHistoryMapper.selectList(new QueryWrapper<JobApplicationStatusHistory>()
+                .select("DISTINCT application_id")
+                .eq("user_id", userId)
+                .eq("to_status", status.name())).size();
+        return BigDecimal.valueOf(converted * 100.0 / total)
+                .setScale(1, RoundingMode.HALF_UP);
     }
 
     private Map<JobApplicationStatus, Long> getStatusCounts(long userId) {
@@ -250,13 +318,91 @@ public class JobApplicationServiceImpl
         return application;
     }
 
-    private void validateRequiredFields(String companyName, String jobTitle) {
-        if (StringUtils.isBlank(companyName) || StringUtils.isBlank(jobTitle)) {
+    private void validateApplication(JobApplication application) {
+        if (StringUtils.isBlank(application.getCompanyName())
+                || StringUtils.isBlank(application.getJobTitle())) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "Company and job title are required");
         }
-        if (companyName.length() > 128 || jobTitle.length() > 128) {
+        if (application.getCompanyName().length() > 128
+                || application.getJobTitle().length() > 128) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "Company or job title is too long");
         }
+        if (application.getLocation() != null && application.getLocation().length() > 128) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "Location is too long");
+        }
+        if (application.getJobUrl() != null && application.getJobUrl().length() > 1024) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "Job URL is too long");
+        }
+        validateJobUrl(application.getJobUrl());
+        if (application.getNextStep() != null && application.getNextStep().length() > 255) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "Next step is too long");
+        }
+        if (application.getNotes() != null
+                && application.getNotes().length() > MAX_NOTES_LENGTH) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "Notes are too long");
+        }
+        if (application.getAppliedDate() != null && application.getDeadline() != null
+                && application.getDeadline().isBefore(application.getAppliedDate())) {
+            throw new BusinessException(
+                    ErrorCode.PARAMS_ERROR,
+                    "Deadline cannot be earlier than the applied date");
+        }
+        if (StringUtils.isNotBlank(application.getWorkMode())
+                && !isValidWorkMode(application.getWorkMode())) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "Unsupported work mode");
+        }
+    }
+
+    private void validateJobUrl(String jobUrl) {
+        if (StringUtils.isBlank(jobUrl)) {
+            return;
+        }
+        try {
+            URI uri = new URI(jobUrl);
+            boolean validScheme = "http".equalsIgnoreCase(uri.getScheme())
+                    || "https".equalsIgnoreCase(uri.getScheme());
+            if (!validScheme || StringUtils.isBlank(uri.getHost())) {
+                throw new BusinessException(ErrorCode.PARAMS_ERROR, "Enter a valid HTTP or HTTPS URL");
+            }
+        } catch (URISyntaxException e) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "Enter a valid HTTP or HTTPS URL");
+        }
+    }
+
+    private boolean isValidWorkMode(String workMode) {
+        return "ON_SITE".equalsIgnoreCase(workMode)
+                || "HYBRID".equalsIgnoreCase(workMode)
+                || "REMOTE".equalsIgnoreCase(workMode);
+    }
+
+    private void validateDateRange(LocalDate start, LocalDate end, String fieldName) {
+        if (start != null && end != null && start.isAfter(end)) {
+            throw new BusinessException(
+                    ErrorCode.PARAMS_ERROR,
+                    "The " + fieldName + " start cannot be after its end");
+        }
+    }
+
+    private String getSortColumn(String sortField) {
+        if ("companyName".equals(sortField)) {
+            return "company_name";
+        }
+        if ("jobTitle".equals(sortField)) {
+            return "job_title";
+        }
+        if ("status".equals(sortField)) {
+            return "status";
+        }
+        if ("appliedDate".equals(sortField)) {
+            return "applied_date";
+        }
+        if ("deadline".equals(sortField)) {
+            return "deadline";
+        }
+        if ("createdAt".equals(sortField)) {
+            return "created_at";
+        }
+        return null;
     }
 
     private String normalizeStatus(String status, String defaultStatus) {

@@ -1,12 +1,14 @@
 import { useRef, useState } from 'react';
 import type { ActionType, ProColumns } from '@ant-design/pro-table';
 import ProTable from '@ant-design/pro-table';
-import { Button, DatePicker, Form, Input, message, Modal, Popconfirm, Select, Space } from 'antd';
+import { Button, DatePicker, Form, Input, message, Modal, Popconfirm, Select, Space, Tag } from 'antd';
 import type { Moment } from 'moment';
 import moment from 'moment';
+import { reminderFor } from './reminder';
 import {
   addApplication,
   deleteApplication,
+  getApplicationHistory,
   listApplications,
   updateApplication,
 } from '@/services/application';
@@ -54,12 +56,17 @@ const toRequestBody = (values: ApplicationFormValues): API.JobApplicationInput =
   nextFollowUpDate: formatDate(values.nextFollowUpDate),
 });
 
+export { toRequestBody };
+
 export default function ApplicationsPage() {
   const actionRef = useRef<ActionType>();
   const [form] = Form.useForm<ApplicationFormValues>();
   const [modalVisible, setModalVisible] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [editingApplication, setEditingApplication] = useState<API.JobApplication>();
+  const [historyVisible, setHistoryVisible] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [history, setHistory] = useState<API.JobApplicationStatusHistory[]>([]);
 
   const openCreateModal = () => {
     setEditingApplication(undefined);
@@ -111,21 +118,81 @@ export default function ApplicationsPage() {
     }
   };
 
+  const changeStatus = async (application: API.JobApplication, status: API.JobApplicationStatus) => {
+    if (status === application.status) return;
+    try {
+      await updateApplication({ id: application.id, status } as API.JobApplicationUpdateInput);
+      message.success('Status updated');
+      window.dispatchEvent(new Event('applications-updated'));
+      actionRef.current?.reload();
+    } catch (error) {
+      message.error('Unable to update status');
+    }
+  };
+
+  const openHistory = async (application: API.JobApplication) => {
+    setHistoryVisible(true);
+    setHistoryLoading(true);
+    try {
+      setHistory((await getApplicationHistory(application.id)) ?? []);
+    } catch (error) {
+      message.error('Unable to load status history');
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
   const columns: ProColumns<API.JobApplication>[] = [
     {
       title: 'Company',
       dataIndex: 'companyName',
       copyable: true,
+      sorter: true,
     },
     {
       title: 'Job title',
       dataIndex: 'jobTitle',
+      sorter: true,
     },
     {
       title: 'Status',
       dataIndex: 'status',
       valueType: 'select',
       valueEnum: statusValueEnum,
+      sorter: true,
+      render: (_, record) => (
+        <Select
+          value={record.status}
+          options={statusOptions}
+          size="small"
+          onChange={(value: API.JobApplicationStatus) => changeStatus(record, value)}
+          style={{ minWidth: 120 }}
+        />
+      ),
+    },
+    {
+      title: 'Applied date range',
+      dataIndex: 'appliedDateRange',
+      valueType: 'dateRange',
+      hideInTable: true,
+      search: {
+        transform: (value: string[]) => ({
+          appliedDateStart: value?.[0],
+          appliedDateEnd: value?.[1],
+        }),
+      },
+    },
+    {
+      title: 'Deadline range',
+      dataIndex: 'deadlineRange',
+      valueType: 'dateRange',
+      hideInTable: true,
+      search: {
+        transform: (value: string[]) => ({
+          deadlineStart: value?.[0],
+          deadlineEnd: value?.[1],
+        }),
+      },
     },
     {
       title: 'Location',
@@ -147,18 +214,38 @@ export default function ApplicationsPage() {
       dataIndex: 'appliedDate',
       valueType: 'date',
       hideInSearch: true,
+      sorter: true,
     },
     {
       title: 'Deadline',
       dataIndex: 'deadline',
       valueType: 'date',
       hideInSearch: true,
+      sorter: true,
+      render: (_, record) => {
+        const reminder = reminderFor(record.deadline, 'deadline');
+        return (
+          <Space size={6}>
+            <span>{record.deadline || '-'}</span>
+            {reminder && <Tag color={reminder.color}>{reminder.text}</Tag>}
+          </Space>
+        );
+      },
     },
     {
       title: 'Next follow-up',
       dataIndex: 'nextFollowUpDate',
       valueType: 'date',
       hideInSearch: true,
+      render: (_, record) => {
+        const reminder = reminderFor(record.nextFollowUpDate, 'followUp');
+        return (
+          <Space size={6}>
+            <span>{record.nextFollowUpDate || '-'}</span>
+            {reminder && <Tag color={reminder.color}>{reminder.text}</Tag>}
+          </Space>
+        );
+      },
     },
     {
       title: 'Next step',
@@ -186,6 +273,9 @@ export default function ApplicationsPage() {
         <a key="edit" onClick={() => openEditModal(record)}>
           Edit
         </a>,
+        <a key="history" onClick={() => openHistory(record)}>
+          History
+        </a>,
         <Popconfirm
           key="delete"
           title="Delete this application?"
@@ -201,7 +291,7 @@ export default function ApplicationsPage() {
 
   return (
     <>
-      <ProTable<API.JobApplication>
+      <ProTable<API.JobApplication, API.JobApplicationQueryParams>
         actionRef={actionRef}
         rowKey="id"
         columns={columns}
@@ -211,13 +301,22 @@ export default function ApplicationsPage() {
             Add application
           </Button>,
         ]}
-        request={async (params) => {
+        request={async (params, sorter) => {
+          const sortEntry = Object.entries(sorter ?? {})[0] as
+            | [string, 'ascend' | 'descend']
+            | undefined;
           const page = await listApplications({
             current: params.current,
             pageSize: params.pageSize,
             companyName: params.companyName,
             jobTitle: params.jobTitle,
             status: params.status,
+            appliedDateStart: params.appliedDateStart,
+            appliedDateEnd: params.appliedDateEnd,
+            deadlineStart: params.deadlineStart,
+            deadlineEnd: params.deadlineEnd,
+            sortField: sortEntry?.[0],
+            sortOrder: sortEntry?.[1],
           });
           return {
             data: page?.records ?? [],
@@ -247,18 +346,24 @@ export default function ApplicationsPage() {
             <Form.Item
               name="companyName"
               label="Company"
-              rules={[{ required: true, message: 'Enter the company name' }]}
+              rules={[
+                { required: true, whitespace: true, message: 'Enter the company name' },
+                { max: 128, message: 'Company name cannot exceed 128 characters' },
+              ]}
               style={{ flex: 1 }}
             >
-              <Input maxLength={100} />
+              <Input maxLength={128} />
             </Form.Item>
             <Form.Item
               name="jobTitle"
               label="Job title"
-              rules={[{ required: true, message: 'Enter the job title' }]}
+              rules={[
+                { required: true, whitespace: true, message: 'Enter the job title' },
+                { max: 128, message: 'Job title cannot exceed 128 characters' },
+              ]}
               style={{ flex: 1 }}
             >
-              <Input maxLength={100} />
+              <Input maxLength={128} />
             </Form.Item>
           </Space>
 
@@ -278,22 +383,48 @@ export default function ApplicationsPage() {
             </Form.Item>
           </Space>
 
-          <Form.Item name="location" label="Location">
-            <Input maxLength={100} placeholder="Vancouver, BC" />
+          <Form.Item
+            name="location"
+            label="Location"
+            rules={[{ max: 128, message: 'Location cannot exceed 128 characters' }]}
+          >
+            <Input maxLength={128} placeholder="Vancouver, BC" />
           </Form.Item>
           <Form.Item
             name="jobUrl"
             label="Job posting URL"
-            rules={[{ type: 'url', message: 'Enter a valid URL' }]}
+            rules={[
+              { type: 'url', message: 'Enter a valid URL' },
+              { pattern: /^https?:\/\//i, message: 'URL must start with http:// or https://' },
+              { max: 1024, message: 'URL cannot exceed 1024 characters' },
+            ]}
           >
-            <Input maxLength={500} placeholder="https://..." />
+            <Input maxLength={1024} placeholder="https://..." />
           </Form.Item>
 
           <Space size="large" style={{ display: 'flex' }} align="start">
             <Form.Item name="appliedDate" label="Applied date" style={{ flex: 1 }}>
               <DatePicker style={{ width: '100%' }} />
             </Form.Item>
-            <Form.Item name="deadline" label="Deadline" style={{ flex: 1 }}>
+            <Form.Item
+              name="deadline"
+              label="Deadline"
+              dependencies={['appliedDate']}
+              rules={[
+                ({ getFieldValue }) => ({
+                  validator(_, value) {
+                    const appliedDate = getFieldValue('appliedDate');
+                    if (!value || !appliedDate || !value.isBefore(appliedDate, 'day')) {
+                      return Promise.resolve();
+                    }
+                    return Promise.reject(
+                      new Error('Deadline cannot be earlier than the applied date'),
+                    );
+                  },
+                }),
+              ]}
+              style={{ flex: 1 }}
+            >
               <DatePicker style={{ width: '100%' }} />
             </Form.Item>
             <Form.Item name="nextFollowUpDate" label="Next follow-up" style={{ flex: 1 }}>
@@ -301,13 +432,42 @@ export default function ApplicationsPage() {
             </Form.Item>
           </Space>
 
-          <Form.Item name="nextStep" label="Next step">
+          <Form.Item
+            name="nextStep"
+            label="Next step"
+            rules={[{ max: 255, message: 'Next step cannot exceed 255 characters' }]}
+          >
             <Input maxLength={255} placeholder="Prepare for the technical interview" />
           </Form.Item>
-          <Form.Item name="notes" label="Notes">
+          <Form.Item
+            name="notes"
+            label="Notes"
+            rules={[{ max: 2000, message: 'Notes cannot exceed 2000 characters' }]}
+          >
             <Input.TextArea maxLength={2000} rows={4} showCount />
           </Form.Item>
         </Form>
+      </Modal>
+
+      <Modal
+        title="Status history"
+        visible={historyVisible}
+        footer={null}
+        onCancel={() => setHistoryVisible(false)}
+      >
+        <ProTable<API.JobApplicationStatusHistory>
+          rowKey="id"
+          search={false}
+          options={false}
+          pagination={false}
+          loading={historyLoading}
+          dataSource={history}
+          columns={[
+            { title: 'From', dataIndex: 'fromStatus', render: (value) => value || 'Created' },
+            { title: 'To', dataIndex: 'toStatus' },
+            { title: 'Changed at', dataIndex: 'changedAt' },
+          ]}
+        />
       </Modal>
     </>
   );

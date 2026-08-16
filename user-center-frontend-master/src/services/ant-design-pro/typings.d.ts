@@ -56,6 +56,15 @@ declare namespace API {
     updatedAt?: string;
   };
 
+  type JobApplicationStatusHistory = {
+    id: number;
+    applicationId: number;
+    userId: number;
+    fromStatus?: JobApplicationStatus;
+    toStatus: JobApplicationStatus;
+    changedAt: string;
+  };
+
   type JobApplicationInput = {
     companyName: string;
     jobTitle: string;
@@ -78,6 +87,12 @@ declare namespace API {
     companyName?: string;
     jobTitle?: string;
     status?: JobApplicationStatus;
+    appliedDateStart?: string;
+    appliedDateEnd?: string;
+    deadlineStart?: string;
+    deadlineEnd?: string;
+    sortField?: string;
+    sortOrder?: 'ascend' | 'descend';
   };
 
   type JobApplicationPage = {
@@ -94,6 +109,8 @@ declare namespace API {
     interviews: number;
     offers: number;
     rejected: number;
+    interviewRate: number;
+    offerRate: number;
     upcomingDeadlines: number;
     followUpsDue: number;
     recentApplications: JobApplication[];

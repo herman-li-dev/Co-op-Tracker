@@ -4,6 +4,7 @@ import com.herman.usercenter.model.domain.JobApplication;
 import lombok.Data;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.util.List;
 
 /**
@@ -23,6 +24,10 @@ public class ApplicationDashboardVO implements Serializable {
     private Long offers;
 
     private Long rejected;
+
+    private BigDecimal interviewRate;
+
+    private BigDecimal offerRate;
 
     private Long upcomingDeadlines;
 

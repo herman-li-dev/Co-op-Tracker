@@ -6,6 +6,7 @@ import com.herman.usercenter.common.ErrorCode;
 import com.herman.usercenter.common.ResultUtils;
 import com.herman.usercenter.exception.BusinessException;
 import com.herman.usercenter.model.domain.JobApplication;
+import com.herman.usercenter.model.domain.JobApplicationStatusHistory;
 import com.herman.usercenter.model.domain.User;
 import com.herman.usercenter.model.domain.request.JobApplicationAddRequest;
 import com.herman.usercenter.model.domain.request.JobApplicationDeleteRequest;
@@ -22,6 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
+import java.util.List;
 
 import static com.herman.usercenter.contant.UserConstant.USER_LOGIN_STATE;
 
@@ -81,6 +83,14 @@ public class JobApplicationController {
     public BaseResponse<ApplicationDashboardVO> getDashboard(HttpServletRequest request) {
         ApplicationDashboardVO dashboard = jobApplicationService.getDashboard(getLoginUserId(request));
         return ResultUtils.success(dashboard);
+    }
+
+    @GetMapping("/history")
+    public BaseResponse<List<JobApplicationStatusHistory>> getStatusHistory(
+            @RequestParam long id,
+            HttpServletRequest request) {
+        return ResultUtils.success(
+                jobApplicationService.getStatusHistory(id, getLoginUserId(request)));
     }
 
     private long getLoginUserId(HttpServletRequest request) {
