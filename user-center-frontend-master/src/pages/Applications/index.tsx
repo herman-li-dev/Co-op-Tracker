@@ -171,7 +171,7 @@ export default function ApplicationsPage() {
       ),
     },
     {
-      title: 'Applied date range',
+      title: 'Applied date',
       dataIndex: 'appliedDateRange',
       valueType: 'dateRange',
       hideInTable: true,
@@ -183,7 +183,7 @@ export default function ApplicationsPage() {
       },
     },
     {
-      title: 'Deadline range',
+      title: 'Deadline',
       dataIndex: 'deadlineRange',
       valueType: 'dateRange',
       hideInTable: true,
@@ -328,7 +328,7 @@ export default function ApplicationsPage() {
           defaultPageSize: 10,
           showSizeChanger: true,
         }}
-        search={{ labelWidth: 'auto' }}
+      search={{ labelWidth: 96, span: 4 }}
       />
 
       <Modal
