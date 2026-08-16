@@ -2,6 +2,7 @@
 
 # dependencies
 **/node_modules
+.npm-cache/
 # roadhog-api-doc ignore
 /src/utils/request-temp.js
 _roadhog-api-doc
@@ -19,7 +20,6 @@ yarn-error.log
 .idea
 /coverage
 yarn.lock
-package-lock.json
 pnpm-lock.yaml
 *bak
 
