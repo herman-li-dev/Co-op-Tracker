@@ -65,7 +65,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         // 账户不能包含特殊字符
         String validPattern = "[`~!@#$%^&*()+=|{}':;',\\\\[\\\\].<>/?~！@#￥%……&*（）——+|{}【】‘；：”“’。，、？]";
         Matcher matcher = Pattern.compile(validPattern).matcher(userAccount);
-        if (matcher.find()) {
+        if (StringUtils.containsWhitespace(userAccount) || matcher.find()) {
             return -1;
         }
         // 密码和校验密码相同
