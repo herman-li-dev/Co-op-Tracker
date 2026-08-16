@@ -2,8 +2,8 @@ import { useRef, useState } from 'react';
 import type { ActionType, ProColumns } from '@ant-design/pro-table';
 import ProTable from '@ant-design/pro-table';
 import { Button, DatePicker, Form, Input, message, Modal, Popconfirm, Select, Space, Tag } from 'antd';
-import type { Moment } from 'moment';
 import moment from 'moment';
+import { toRequestBody, type ApplicationFormValues } from './applicationForm';
 import { reminderFor } from './reminder';
 import {
   addApplication,
@@ -12,20 +12,6 @@ import {
   listApplications,
   updateApplication,
 } from '@/services/application';
-
-type ApplicationFormValues = {
-  companyName: string;
-  jobTitle: string;
-  location?: string;
-  jobUrl?: string;
-  status: API.JobApplicationStatus;
-  workMode?: string;
-  appliedDate?: Moment;
-  deadline?: Moment;
-  nextFollowUpDate?: Moment;
-  nextStep?: string;
-  notes?: string;
-};
 
 const statusOptions = [
   { label: 'Saved', value: 'SAVED' },
@@ -46,17 +32,6 @@ const statusValueEnum = {
   REJECTED: { text: 'Rejected', status: 'Error' },
   WITHDRAWN: { text: 'Withdrawn', status: 'Default' },
 };
-
-const formatDate = (value?: Moment) => value?.format('YYYY-MM-DD');
-
-const toRequestBody = (values: ApplicationFormValues): API.JobApplicationInput => ({
-  ...values,
-  appliedDate: formatDate(values.appliedDate),
-  deadline: formatDate(values.deadline),
-  nextFollowUpDate: formatDate(values.nextFollowUpDate),
-});
-
-export { toRequestBody };
 
 export default function ApplicationsPage() {
   const actionRef = useRef<ActionType>();
