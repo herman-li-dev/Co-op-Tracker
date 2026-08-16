@@ -12,7 +12,6 @@ import {stringify} from "querystring";
  */
 const request = extend({
   credentials: 'include', // 默认请求是否带上cookie
-  prefix: process.env.NODE_ENV === 'production' ? 'http://user-backend.code-nav.cn' : undefined
   // requestType: 'form',
 });
 
@@ -26,7 +25,9 @@ request.interceptors.request.use((url, options): any => {
     url,
     options: {
       ...options,
-      headers: {},
+      headers: {
+        ...options.headers,
+      },
     },
   };
 });
@@ -34,13 +35,13 @@ request.interceptors.request.use((url, options): any => {
 /**
  * 所有响应拦截器
  */
-request.interceptors.response.use(async (response, options): Promise<any> => {
+request.interceptors.response.use(async (response): Promise<any> => {
   const res = await response.clone().json();
   if (res.code === 0) {
     return res.data;
   }
   if (res.code === 40100) {
-    message.error('请先登录');
+    message.error('Please sign in to continue');
     history.replace({
       pathname: '/user/login',
       search: stringify({
@@ -48,7 +49,7 @@ request.interceptors.response.use(async (response, options): Promise<any> => {
       }),
     });
   } else {
-    message.error(res.description)
+    message.error(res.description || res.message || 'Request failed')
   }
   return res.data;
 });

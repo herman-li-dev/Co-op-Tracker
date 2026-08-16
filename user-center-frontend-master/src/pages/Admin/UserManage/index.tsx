@@ -1,8 +1,8 @@
-import React, { useRef } from 'react';
+import { useRef } from 'react';
 import type { ProColumns, ActionType } from '@ant-design/pro-table';
-import ProTable, { TableDropdown } from '@ant-design/pro-table';
-import { searchUsers } from "@/services/ant-design-pro/api";
-import {Image} from "antd";
+import ProTable from '@ant-design/pro-table';
+import { deleteUser, searchUsers } from "@/services/ant-design-pro/api";
+import {Image, message, Popconfirm} from "antd";
 
 const columns: ProColumns<API.CurrentUser>[] = [
   {
@@ -11,17 +11,17 @@ const columns: ProColumns<API.CurrentUser>[] = [
     width: 48,
   },
   {
-    title: '用户名',
-    dataIndex: 'username',
+    title: 'Name',
+    dataIndex: 'userName',
     copyable: true,
   },
   {
-    title: '用户账户',
+    title: 'Account',
     dataIndex: 'userAccount',
     copyable: true,
   },
   {
-    title: '头像',
+    title: 'Avatar',
     dataIndex: 'avatarUrl',
     render: (_, record) => (
       <div>
@@ -30,67 +30,59 @@ const columns: ProColumns<API.CurrentUser>[] = [
     ),
   },
   {
-    title: '性别',
+    title: 'Gender',
     dataIndex: 'gender',
   },
   {
-    title: '电话',
+    title: 'Phone',
     dataIndex: 'phone',
     copyable: true,
   },
   {
-    title: '邮件',
+    title: 'Email',
     dataIndex: 'email',
     copyable: true,
   },
   {
-    title: '状态',
+    title: 'Status',
     dataIndex: 'userStatus',
   },
   {
-    title: '星球编号',
-    dataIndex: 'planetCode',
-  },
-  {
-    title: '角色',
+    title: 'Role',
     dataIndex: 'userRole',
     valueType: 'select',
     valueEnum: {
-      0: { text: '普通用户', status: 'Default' },
+      0: { text: 'User', status: 'Default' },
       1: {
-        text: '管理员',
+        text: 'Administrator',
         status: 'Success',
       },
     },
   },
   {
-    title: '创建时间',
+    title: 'Created',
     dataIndex: 'createTime',
     valueType: 'dateTime',
   },
   {
-    title: '操作',
+    title: 'Actions',
     valueType: 'option',
-    render: (text, record, _, action) => [
-      <a
-        key="editable"
-        onClick={() => {
-          action?.startEditable?.(record.id);
+    render: (_, record, __, action) => [
+      <Popconfirm
+        key="delete"
+        title="Delete this user?"
+        okText="Delete"
+        cancelText="Cancel"
+        onConfirm={async () => {
+          const success = await deleteUser(record.id);
+          if (success) {
+            message.success('User deleted');
+            action?.reload();
+          }
         }}
       >
-        编辑
-      </a>,
-      <a href={record.url} target="_blank" rel="noopener noreferrer" key="view">
-        查看
-      </a>,
-      <TableDropdown
-        key="actionGroup"
-        onSelect={() => action?.reload()}
-        menus={[
-          { key: 'copy', name: '复制' },
-          { key: 'delete', name: '删除' },
-        ]}
-      />,
+        <a>Delete</a>
+      </Popconfirm>,
     ],
   },
 ];
@@ -102,24 +94,20 @@ export default () => {
       columns={columns}
       actionRef={actionRef}
       cardBordered
-      request={async (params = {}, sort, filter) => {
-        console.log(sort, filter);
+      request={async () => {
         const userList = await searchUsers();
         return {
-          data: userList
+          data: userList,
+          total: userList.length,
+          success: true,
         }
-      }}
-      editable={{
-        type: 'multiple',
       }}
       columnsState={{
         persistenceKey: 'pro-table-singe-demos',
         persistenceType: 'localStorage',
       }}
       rowKey="id"
-      search={{
-        labelWidth: 'auto',
-      }}
+      search={false}
       form={{
         // 由于配置了 transform，提交的参与与定义的不同这里需要转化一下
         syncToUrl: (values, type) => {
@@ -136,7 +124,7 @@ export default () => {
         pageSize: 5,
       }}
       dateFormatter="string"
-      headerTitle="高级表格"
+      headerTitle="Users"
     />
   );
 };

@@ -5,26 +5,26 @@
     routes: [
       {
         path: '/user', routes: [
-          {name: '登录', path: '/user/login', component: './user/Login'},
-          {name: '注册', path: '/user/register', component: './user/Register'}
+          {name: 'Sign in', path: '/user/login', component: './user/Login'},
+          {name: 'Create account', path: '/user/register', component: './user/Register'}
         ]
       },
       {component: './404'},
     ],
   },
-  {path: '/welcome', name: '欢迎', icon: 'smile', component: './Welcome'},
+  {path: '/welcome', name: 'Dashboard', icon: 'dashboard', component: './Welcome'},
+  {path: '/applications', name: 'Applications', icon: 'profile', component: './Applications'},
   {
     path: '/admin',
-    name: '管理页',
+    name: 'Administration',
     icon: 'crown',
     access: 'canAdmin',
     component: './Admin',
     routes: [
-      {path: '/admin/user-manage', name: '用户管理', icon: 'smile', component: './Admin/UserManage'},
+      {path: '/admin/user-manage', name: 'User Management', icon: 'team', component: './Admin/UserManage'},
       {component: './404'},
     ],
   },
-  {name: '查询表格', icon: 'table', path: '/list', component: './TableList'},
   {path: '/', redirect: '/welcome'},
   {component: './404'},
 ];

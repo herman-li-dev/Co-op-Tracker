@@ -12,9 +12,9 @@ const Settings: LayoutSettings & {
   fixedHeader: false,
   fixSiderbar: true,
   colorWeak: false,
-  title: '鱼皮用户中心',
+  title: 'Co-op Tracker',
   pwa: false,
-  logo: 'https://gw.alipayobjects.com/zos/rmsportal/KDpgvguMpGfqaHPjicRK.svg',
+  logo: '/logo.svg',
   iconfontUrl: '',
 };
 

@@ -1,0 +1,22 @@
+spring:
+  application:
+    name: co-op-application-tracker
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: ${DB_URL:jdbc:mysql://localhost:13306/yuyang}
+    username: ${DB_USERNAME:user_center}
+    password: ${DB_PASSWORD:}
+  session:
+    timeout: 86400
+
+server:
+  port: 8080
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: false
+  global-config:
+    db-config:
+      logic-delete-field: isDelete
+      logic-delete-value: 1
+      logic-not-delete-value: 0

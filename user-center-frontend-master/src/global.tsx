@@ -20,7 +20,7 @@ const clearCache = () => {
 if (pwa) {
   // Notify user if offline now
   window.addEventListener('sw.offline', () => {
-    message.warning('当前处于离线状态');
+    message.warning('You are currently offline');
   }); // Pop up a prompt on the page asking the user if they want to use the latest version
 
   window.addEventListener('sw.updated', (event: Event) => {
@@ -67,12 +67,12 @@ if (pwa) {
           reloadSW();
         }}
       >
-        {'刷新'}
+        Refresh
       </Button>
     );
     notification.open({
-      message: '有新内容',
-      description: '请点击“刷新”按钮或者手动刷新页面',
+      message: 'Update available',
+      description: 'Refresh the page to load the latest version.',
       btn,
       key,
       onClose: async () => null,

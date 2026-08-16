@@ -73,20 +73,20 @@ const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({ menu }) => {
       {menu && (
         <Menu.Item key="center">
           <UserOutlined />
-          个人中心
+          Profile
         </Menu.Item>
       )}
       {menu && (
         <Menu.Item key="settings">
           <SettingOutlined />
-          个人设置
+          Settings
         </Menu.Item>
       )}
       {menu && <Menu.Divider />}
 
       <Menu.Item key="logout">
         <LogoutOutlined />
-        退出登录
+        Sign out
       </Menu.Item>
     </Menu>
   );
@@ -94,7 +94,9 @@ const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({ menu }) => {
     <HeaderDropdown overlay={menuHeaderDropdown}>
       <span className={`${styles.action} ${styles.account}`}>
         <Avatar size="small" className={styles.avatar} src={currentUser.avatarUrl} alt="avatarUrl" />
-        <span className={`${styles.name} anticon`}>{currentUser.username ?? '无名'}</span>
+          <span className={`${styles.name} anticon`}>
+            {currentUser.userName ?? currentUser.userAccount ?? 'User'}
+          </span>
       </span>
     </HeaderDropdown>
   );

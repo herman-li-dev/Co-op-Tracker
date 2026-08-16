@@ -7,6 +7,11 @@ const { REACT_APP_ENV } = process.env;
 export default defineConfig({
   hash: true,
   antd: {},
+  locale: {
+    default: 'en-US',
+    antd: true,
+    baseNavigator: false,
+  },
   dva: {
     hmr: true,
   },
@@ -32,7 +37,7 @@ export default defineConfig({
   // https://umijs.org/plugins/plugin-esbuild
   esbuild: {},
   title: false,
-  ignoreMomentLocale: true,
+  ignoreMomentLocale: false,
   proxy: proxy[REACT_APP_ENV || 'dev'],
   manifest: {
     basePath: '/',
