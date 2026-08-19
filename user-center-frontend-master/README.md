@@ -1,57 +1,58 @@
-# 用户中心前端
+# Co-op Application Tracker Frontend
 
-This project is initialized with [鱼皮用户中心](https://pro.ant.design). Follow is the quick guide for how to use.
+React frontend for the Co-op Application Tracker. It lets users register and sign in, manage job applications, track application-status history and deadlines, and view progress analytics. Administrators can also manage user accounts.
 
-## Environment Prepare
+## Technology
 
-Install `node_modules`:
+- React 17 and TypeScript
+- Umi 3
+- Ant Design and Ant Design Pro
+- Ant Design Charts
+
+## Prerequisites
+
+- Node.js 16 LTS or later
+- npm
+- The backend service running at `http://localhost:8080` for local development
+
+## Local Development
+
+Install dependencies:
 
 ```bash
-npm install
+npm ci
 ```
 
-or
-
-```bash
-yarn
-```
-
-## Provided Scripts
-
-鱼皮用户中心 provides some useful script to help you quick start and build with web project, code style check and test.
-
-Scripts provided in `package.json`. It's safe to modify or add additional script:
-
-### Start project
+Start the development server:
 
 ```bash
 npm start
 ```
 
-### Build project
+Open `http://localhost:8000`. The development proxy forwards `/api/*` requests to the local backend.
+
+## Quality Checks
+
+Run unit tests:
 
 ```bash
-npm run build
+npm test -- --runInBand
 ```
 
-### Check code style
+Run linting and type checks:
 
 ```bash
 npm run lint
 ```
 
-You can also use script to auto fix some lint error:
+Create a production build:
 
 ```bash
-npm run lint:fix
+npm run build
 ```
 
-### Test code
+The generated files are written to `dist/`.
 
-```bash
-npm test
-```
+## Related Documentation
 
-## More
-
-You can view full document on our [official website](https://pro.ant.design). And welcome any feedback in our [github](https://github.com/ant-design/ant-design-pro).
+See the repository-level [README](../README.md) for full-stack setup, database configuration, deployment, backup, and restore instructions.
