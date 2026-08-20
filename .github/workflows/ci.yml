@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  frontend:
+    name: Frontend checks
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+        env:
+          CI: true
+
+      - name: Build frontend
+        run: npm run build
+        env:
+          NODE_OPTIONS: --openssl-legacy-provider
+
+  backend:
+    name: Backend tests (MySQL)
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_DATABASE: user_center
+          MYSQL_USER: user_center
+          MYSQL_PASSWORD: user_center_test
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "8"
+          cache: maven
+
+      - name: Initialize test database schema
+        working-directory: .
+        run: |
+          docker exec -i "${{ job.services.mysql.id }}" mysql -uroot -proot user_center < "backend/sql/create_tables.sql"
+          docker exec -i "${{ job.services.mysql.id }}" mysql -uroot -proot user_center < "backend/sql/create_job_application.sql"
+          docker exec -i "${{ job.services.mysql.id }}" mysql -uroot -proot user_center < "backend/sql/create_application_status_history.sql"
+
+      - name: Run backend tests
+        run: mvn -B test
+        env:
+          DB_URL: jdbc:mysql://127.0.0.1:3306/user_center?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+          DB_USERNAME: user_center
+          DB_PASSWORD: user_center_test

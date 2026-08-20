@@ -1,0 +1,27 @@
+spring:
+  application:
+    name: co-op-application-tracker
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: ${DB_URL:jdbc:mysql://localhost:13306/coop_tracker}
+    username: ${DB_USERNAME:user_center}
+    password: ${DB_PASSWORD:}
+  session:
+    timeout: 86400
+
+security:
+  password:
+    # Set LEGACY_PASSWORD_MD5_SALT temporarily only when upgrading old MD5 accounts.
+    legacy-md5-salt: ${LEGACY_PASSWORD_MD5_SALT:}
+
+server:
+  port: 8080
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: false
+  global-config:
+    db-config:
+      logic-delete-field: isDelete
+      logic-delete-value: 1
+      logic-not-delete-value: 0
