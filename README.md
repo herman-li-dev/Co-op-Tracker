@@ -5,9 +5,10 @@ A full-stack application that helps students organize Co-op and internship appli
 ## Features
 
 - User registration, sign-in, sign-out, and session-based authentication
-- Create, edit, search, paginate, sort, and soft-delete job applications
-- Manage Saved, Applied, Assessment, Interview, Offer, Rejected, and Withdrawn statuses
-- Track status changes, deadlines, and follow-up reminders
+- Create, edit, filter, paginate, sort, and soft-delete job applications
+- Record company, role, location, job URL, work mode, application date, deadline, next follow-up, next step, and notes
+- Manage Saved, Applied, Assessment, Interview, Offer, Rejected, and Withdrawn statuses, including inline status updates and a complete status history
+- Highlight overdue and upcoming deadlines and follow-ups that are due
 - View application totals, interview and offer rates, status distribution, and an eight-week trend
 - Isolate user data so that users can access only their own applications
 - List and delete users through administrator-only controls
@@ -29,6 +30,15 @@ A full-stack application that helps students organize Co-op and internship appli
 
 ![Sign-in Page](docs/images/login.png)
 
+## Demo Account
+
+Use this non-administrator account to explore the application with demo data:
+
+- Account: `demo_coop`
+- Password: `DemoCoop2026`
+
+This credential is public and intended only for the demo environment. Do not reuse it for an administrator account, production deployment, or any account containing real data.
+
 ## Tech Stack
 
 | Layer | Technologies |
@@ -36,7 +46,7 @@ A full-stack application that helps students organize Co-op and internship appli
 | Frontend | React 17, TypeScript, Umi 3, Ant Design 4, Ant Design Pro, Ant Design Charts |
 | Backend | Java 8, Spring Boot 2.6, Spring MVC, MyBatis-Plus 3.5 |
 | Database | MySQL 8, InnoDB, utf8mb4 |
-| Testing | JUnit 5, Spring Boot Test, Jest / Umi Test |
+| Testing and CI | JUnit 5, Spring Boot Test, Jest / Umi Test, GitHub Actions |
 | Build and deployment | Maven, npm, Nginx, Docker |
 
 ## Architecture
@@ -59,6 +69,7 @@ The backend stores the authenticated user in an HTTP session. During development
 
 ```text
 .
+├── .github/workflows/ci.yml          # Frontend and backend CI checks
 ├── backend/                         # Spring Boot backend
 │   ├── sql/                         # Schema and migration scripts
 │   └── src/
@@ -137,6 +148,8 @@ The backend reads its database configuration from environment variables:
 | `DB_PASSWORD` | Yes | Empty | Database password; do not store it in a config file or commit it |
 | `SPRING_PROFILES_ACTIVE` | No | Not set | Set to `prod` to enable the production configuration |
 
+When `SPRING_PROFILES_ACTIVE=prod`, the checked-in production profile falls back to a MySQL database named `user_center` on port `3306`. Set `DB_URL` explicitly in production to select the intended database and avoid relying on that fallback. The local default remains `coop_tracker` on port `13306`.
+
 PowerShell:
 
 ```powershell
@@ -189,6 +202,8 @@ npm run lint
 npm run build
 ```
 
+The GitHub Actions workflow at `.github/workflows/ci.yml` runs on pushes and pull requests. It installs the frontend dependencies, runs the frontend tests and production build, starts MySQL 8, initializes all three database tables, and runs the backend Maven tests.
+
 ## Database Backup and Restore Test
 
 The examples below use the MySQL command-line tools. Backups may contain personal information, so keep them in a controlled location and never commit them to Git.
@@ -237,5 +252,4 @@ After confirming the restore, have an administrator remove the temporary databas
 ## Roadmap
 
 - Add Service, Controller, and frontend integration test coverage
-- Add continuous integration checks and publish the project to GitHub
 - Configure the domain, HTTPS, minimal public port exposure, and production deployment after a server is available
