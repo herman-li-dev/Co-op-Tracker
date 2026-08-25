@@ -35,7 +35,9 @@ test('user can create an application, advance it to interview, and see dashboard
   await expect(applicationRow).toContainText('Saved');
 
   await applicationRow.locator('.ant-select-selector').click();
-  await page.getByRole('option', { name: 'Interview', exact: true }).click();
+  await page
+    .locator('.ant-select-dropdown:visible .ant-select-item-option[title="Interview"]')
+    .click();
   await expect(page.getByText('Status updated')).toBeVisible();
   await expect(applicationRow).toContainText('Interview');
 
