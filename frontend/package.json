@@ -30,7 +30,7 @@
     "start:no-ui": "cross-env UMI_UI=none UMI_ENV=dev umi dev",
     "start:pre": "cross-env REACT_APP_ENV=pre UMI_ENV=dev umi dev",
     "start:test": "cross-env REACT_APP_ENV=test MOCK=none UMI_ENV=dev umi dev",
-    "test": "umi test",
+    "test": "umi test ./src",
     "test:component": "umi test ./src/components",
     "test:e2e": "playwright test",
     "tsc": "tsc --noEmit"
