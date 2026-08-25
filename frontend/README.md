@@ -11,7 +11,7 @@ React frontend for the Co-op Application Tracker. It lets users register and sig
 
 ## Prerequisites
 
-- Node.js 16 LTS or later
+- Node.js 20 or later
 - npm
 - The backend service running at `http://localhost:8080` for local development
 
@@ -38,6 +38,15 @@ Run unit tests:
 ```bash
 npm test -- --runInBand
 ```
+
+Run the browser end-to-end test against a disposable test database:
+
+```bash
+npm run playwright:install
+npm run test:e2e
+```
+
+The Playwright configuration starts the backend and frontend automatically. Maven must be available in `PATH`, and the database environment variables must point to an initialized test database.
 
 Run linting and type checks:
 

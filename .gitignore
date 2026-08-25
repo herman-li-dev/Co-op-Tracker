@@ -21,6 +21,8 @@ hs_err_pid*
 **/.umi-production/
 **/.cache/
 **/coverage/
+**/playwright-report/
+**/test-results/
 
 # Local environment and secret files
 .env

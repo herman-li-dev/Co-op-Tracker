@@ -89,3 +89,82 @@ jobs:
           DB_URL: jdbc:mysql://127.0.0.1:3306/user_center?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
           DB_USERNAME: user_center
           DB_PASSWORD: user_center_test
+
+  e2e:
+    name: End-to-end test (Chromium)
+    runs-on: ubuntu-latest
+    needs: [frontend, backend]
+    timeout-minutes: 20
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_DATABASE: user_center
+          MYSQL_USER: user_center
+          MYSQL_PASSWORD: user_center_test
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "8"
+          cache: maven
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Initialize end-to-end database
+        run: |
+          docker exec -i "${{ job.services.mysql.id }}" mysql -uroot -proot user_center < "backend/sql/create_tables.sql"
+          docker exec -i "${{ job.services.mysql.id }}" mysql -uroot -proot user_center < "backend/sql/create_job_application.sql"
+          docker exec -i "${{ job.services.mysql.id }}" mysql -uroot -proot user_center < "backend/sql/create_application_status_history.sql"
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Install Chromium
+        working-directory: frontend
+        run: npx playwright install chromium --with-deps
+
+      - name: Run end-to-end test
+        working-directory: frontend
+        run: npm run test:e2e
+        env:
+          CI: true
+          DB_URL: jdbc:mysql://127.0.0.1:3306/user_center?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+          DB_USERNAME: user_center
+          DB_PASSWORD: user_center_test
+
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: frontend/playwright-report/
+          retention-days: 14
+
+      - name: Upload Playwright failure artifacts
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-test-results
+          path: frontend/test-results/
+          retention-days: 14
