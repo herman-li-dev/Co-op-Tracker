@@ -8,6 +8,7 @@ React frontend for the Co-op Application Tracker. It lets users register and sig
 - Umi 3
 - Ant Design and Ant Design Pro
 - Ant Design Charts
+- Jest / Umi Test and Playwright
 
 ## Prerequisites
 

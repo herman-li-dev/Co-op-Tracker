@@ -46,7 +46,7 @@ This credential is public and intended only for the demo environment. Do not reu
 | Frontend | React 17, TypeScript, Umi 3, Ant Design 4, Ant Design Pro, Ant Design Charts |
 | Backend | Java 8, Spring Boot 2.6, Spring MVC, MyBatis-Plus 3.5 |
 | Database | MySQL 8, InnoDB, utf8mb4 |
-| Testing and CI | JUnit 5, Spring Boot Test, Jest / Umi Test, GitHub Actions |
+| Testing and CI | JUnit 5, Spring Boot Test, Jest / Umi Test, Playwright, GitHub Actions |
 | Build and deployment | Maven, npm, Nginx, Docker |
 
 ## Architecture
@@ -69,13 +69,15 @@ The backend stores the authenticated user in an HTTP session. During development
 
 ```text
 .
-├── .github/workflows/ci.yml          # Frontend and backend CI checks
+├── .github/workflows/ci.yml          # Frontend, backend, and browser CI checks
 ├── backend/                         # Spring Boot backend
 │   ├── sql/                         # Schema and migration scripts
 │   └── src/
 ├── frontend/                        # React / Ant Design Pro frontend
 │   ├── config/                      # Routes, proxy, and build configuration
 │   ├── docker/                      # Nginx configuration
+│   ├── e2e/                         # Playwright browser tests
+│   ├── playwright.config.ts         # E2E services, browser, and report configuration
 │   └── src/
 └── docs/images/                     # README screenshots
 ```
@@ -256,10 +258,5 @@ After confirming the restore, have an administrator remove the temporary databas
 - The application uses a dedicated database account, and real credentials are injected only through environment variables.
 - `.gitignore` excludes local environment files, build output, logs, archives, and dependency directories.
 - New passwords use BCrypt with a unique salt. To migrate existing MD5 hashes without forcing a reset, temporarily set `LEGACY_PASSWORD_MD5_SALT` to the old salt; each account is upgraded on its next successful login. Remove the variable after migration.
-- Domain configuration, HTTPS, the reverse proxy, and closing public database/backend ports require a deployment server and are intentionally deferred until deployment preparation.
-- In production, expose only HTTPS publicly. Nginx should forward `/api/` to a backend service bound to a private or loopback interface, and MySQL must not be exposed directly to the internet.
-
-## Roadmap
-
-- Add Service, Controller, and frontend integration test coverage
-- Configure the domain, HTTPS, minimal public port exposure, and production deployment after a server is available
+- The production application is available at [hermanlidev.com](https://hermanlidev.com), with Cloudflare proxying enabled, strict TLS validation, and HTTP redirected to HTTPS.
+- Nginx serves the frontend and forwards `/api/` to the backend over the server's loopback interface. The backend and MySQL ports are not exposed publicly.
