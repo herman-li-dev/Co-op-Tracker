@@ -87,7 +87,7 @@ The backend stores the authenticated user in an HTTP session. During development
 - JDK 8 or later
 - Maven 3.8+
 - MySQL 8.x
-- Node.js 16 LTS (the project declares Node.js 10 as its minimum version)
+- Node.js 20 or later
 - npm 8+
 
 The application uses these ports by default:
@@ -202,7 +202,17 @@ npm run lint
 npm run build
 ```
 
-The GitHub Actions workflow at `.github/workflows/ci.yml` runs on pushes and pull requests. It installs the frontend dependencies, runs the frontend tests and production build, starts MySQL 8, initializes all three database tables, and runs the backend Maven tests.
+The end-to-end test starts the backend and frontend automatically. It requires Maven in `PATH`, a reachable test database with the three schemas initialized, and the database environment variables described above. Install Chromium once, then run the test:
+
+```bash
+cd frontend
+npm run playwright:install
+npm run test:e2e
+```
+
+The Playwright flow registers a unique test account, creates an application, advances it to Interview, and verifies the Dashboard. Run it only against a disposable test database because it creates records.
+
+The GitHub Actions workflow at `.github/workflows/ci.yml` runs on pushes and pull requests. It runs the frontend tests and production build, executes the backend tests against MySQL 8, and then runs the Playwright flow in Chromium against a separate temporary MySQL service. Failed end-to-end runs upload the Playwright report, screenshots, videos, and trace files.
 
 ## Database Backup and Restore Test
 
