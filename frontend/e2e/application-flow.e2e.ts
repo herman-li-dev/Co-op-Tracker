@@ -26,8 +26,8 @@ test('user can create an application, advance it to interview, and see dashboard
   await page.getByRole('button', { name: 'Add application' }).click();
   const dialog = page.locator('.ant-modal:visible');
   await expect(dialog).toContainText('Add application');
-  await dialog.getByLabel('Company').fill(company);
-  await dialog.getByLabel('Job title').fill('Software Developer Intern');
+  await dialog.locator('input#companyName').fill(company);
+  await dialog.locator('input#jobTitle').fill('Software Developer Intern');
   await dialog.getByRole('button', { name: 'Add', exact: true }).click();
 
   await expect(page.getByText('Application added')).toBeVisible();
