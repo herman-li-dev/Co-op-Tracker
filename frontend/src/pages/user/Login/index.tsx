@@ -39,8 +39,9 @@ const Login: React.FC = () => {
         return;
       }
     } catch (error) {
-      const defaultLoginFailureMessage = 'Unable to sign in. Please try again.';
-      message.error(defaultLoginFailureMessage);
+      message.error(
+        error instanceof Error ? error.message : 'Unable to sign in. Please try again.',
+      );
     }
   };
 

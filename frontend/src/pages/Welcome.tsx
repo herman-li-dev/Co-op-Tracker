@@ -69,7 +69,7 @@ const Welcome: React.FC = () => {
         setDashboard(result);
       }
     } catch (error) {
-      message.error('Unable to load dashboard data');
+      message.error(error instanceof Error ? error.message : 'Unable to load dashboard data');
     } finally {
       setLoading(false);
     }

@@ -74,10 +74,14 @@ const columns: ProColumns<API.CurrentUser>[] = [
         okText="Delete"
         cancelText="Cancel"
         onConfirm={async () => {
-          const success = await deleteUser(record.id);
-          if (success) {
-            message.success('User deleted');
-            action?.reload();
+          try {
+            const success = await deleteUser(record.id);
+            if (success) {
+              message.success('User deleted');
+              action?.reload();
+            }
+          } catch (error) {
+            message.error(error instanceof Error ? error.message : 'Unable to delete the user');
           }
         }}
       >
@@ -95,12 +99,17 @@ export default () => {
       actionRef={actionRef}
       cardBordered
       request={async () => {
-        const userList = await searchUsers();
-        return {
-          data: userList,
-          total: userList.length,
-          success: true,
-        };
+        try {
+          const userList = await searchUsers();
+          return {
+            data: userList,
+            total: userList.length,
+            success: true,
+          };
+        } catch (error) {
+          message.error(error instanceof Error ? error.message : 'Unable to load users');
+          return { data: [], total: 0, success: false };
+        }
       }}
       columnsState={{
         persistenceKey: 'pro-table-singe-demos',
