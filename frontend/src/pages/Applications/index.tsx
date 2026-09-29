@@ -88,19 +88,21 @@ export default function ApplicationsPage() {
         actionRef.current?.reload();
       }
     } catch (error) {
-      if (error instanceof Error) {
-        message.error('Unable to save the application');
-      }
+      message.error(error instanceof Error ? error.message : 'Unable to save the application');
     } finally {
       setSubmitting(false);
     }
   };
 
   const removeApplication = async (id: number) => {
-    const success = await deleteApplication(id);
-    if (success) {
-      message.success('Application deleted');
-      actionRef.current?.reload();
+    try {
+      const success = await deleteApplication(id);
+      if (success) {
+        message.success('Application deleted');
+        actionRef.current?.reload();
+      }
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : 'Unable to delete the application');
     }
   };
 
@@ -115,7 +117,7 @@ export default function ApplicationsPage() {
       window.dispatchEvent(new Event('applications-updated'));
       actionRef.current?.reload();
     } catch (error) {
-      message.error('Unable to update status');
+      message.error(error instanceof Error ? error.message : 'Unable to update status');
     }
   };
 
@@ -125,7 +127,7 @@ export default function ApplicationsPage() {
     try {
       setHistory((await getApplicationHistory(application.id)) ?? []);
     } catch (error) {
-      message.error('Unable to load status history');
+      message.error(error instanceof Error ? error.message : 'Unable to load status history');
     } finally {
       setHistoryLoading(false);
     }

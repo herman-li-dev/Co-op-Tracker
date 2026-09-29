@@ -34,8 +34,9 @@ const Register: React.FC = () => {
         return;
       }
     } catch (error) {
-      const defaultLoginFailureMessage = 'Unable to create the account. Please try again.';
-      message.error(defaultLoginFailureMessage);
+      message.error(
+        error instanceof Error ? error.message : 'Unable to create the account. Please try again.',
+      );
     }
   };
 
